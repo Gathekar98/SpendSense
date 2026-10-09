@@ -3,12 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Alert, TextInput, Pressable, StyleSheet, Text, View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-
-type Transaction = {
-  id:string;
-  merchant: string;
-  amount: number;
-}
+import {Transaction} from './src/types/transaction';
 const TRANSACTIONS_STORAGE_KEY = '@spendsense/transactions';
 
 export default function App() {
