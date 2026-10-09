@@ -1,10 +1,27 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Alert, TextInput, Pressable, StyleSheet, Text, View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-import {Transaction} from './src/types/transaction';
-const TRANSACTIONS_STORAGE_KEY = '@spendsense/transactions';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+} from 'react-native-safe-area-context';
+
+import { TransactionRow } from './src/components/TransactionRow';
+import {
+  loadTransactions,
+  saveTransactions,
+} from './src/storage/transactionStorage';
+import { Transaction } from './src/types/transaction';
 
 export default function App() {
   const [merchant, setMerchant] = useState('');
@@ -12,51 +29,86 @@ export default function App() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [hasLoadedTransactions, setHasLoadedTransactions] = useState(false);
 
-  const totalSpent = transactions.reduce((total, transaction) => total + transaction.amount, 0);
+  const totalSpent = transactions.reduce(
+    (total, transaction) => total + transaction.amount,
+    0
+  );
+
+  useEffect(() => {
+    const restoreTransactions = async () => {
+      try {
+        const storedTransactions = await loadTransactions();
+        setTransactions(storedTransactions);
+      } catch (error) {
+        console.error('Unable to load transactions:', error);
+      } finally {
+        setHasLoadedTransactions(true);
+      }
+    };
+
+    restoreTransactions();
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedTransactions) {
+      return;
+    }
+
+    const persistTransactions = async () => {
+      try {
+        await saveTransactions(transactions);
+      } catch (error) {
+        console.error('Unable to save transactions:', error);
+      }
+    };
+
+    persistTransactions();
+  }, [transactions, hasLoadedTransactions]);
 
   const handleAddTransaction = () => {
     const parsedAmount = Number(amount);
 
-    if(!merchant.trim() || !amount.trim()){
-      Alert.alert('Missing information', 'Enter a merchant & amount.');
-      return;
-    } 
-    if(!Number.isFinite(parsedAmount) || parsedAmount <= 0){
-      Alert.alert('Invalid amount', 'Enter a valid amount greater than Zero.');
+    if (!merchant.trim() || !amount.trim()) {
+      Alert.alert('Missing information', 'Enter a merchant and amount.');
       return;
     }
 
-    const newTransaction : Transaction = {
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      Alert.alert('Invalid amount', 'Enter an amount greater than zero.');
+      return;
+    }
+
+    const newTransaction: Transaction = {
       id: Date.now().toString(),
-      merchant : merchant.trim(),
+      merchant: merchant.trim(),
       amount: parsedAmount,
     };
 
-    setTransactions((currentTransactions)=> [
+    setTransactions((currentTransactions) => [
       newTransaction,
       ...currentTransactions,
-    ])
+    ]);
 
     setMerchant('');
     setAmount('');
-  }
+  };
 
   const handleDeleteTransaction = (transaction: Transaction) => {
     Alert.alert(
-      'Delete transaction',
-      `${transaction.merchant} - ₹${transaction.amount.toFixed(2)}`,
+      'Delete transaction?',
+      `${transaction.merchant} — ₹${transaction.amount.toFixed(2)}`,
       [
         {
           text: 'Cancel',
           style: 'cancel',
-        } ,
+        },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            setTransactions((currentTransactions) => 
+            setTransactions((currentTransactions) =>
               currentTransactions.filter(
-                (currentTransaction) => 
+                (currentTransaction) =>
                   currentTransaction.id !== transaction.id
               )
             );
@@ -66,125 +118,94 @@ export default function App() {
     );
   };
 
-  useEffect(()=> {
-    const loadTransactions = async () => {
-      try{
-        const storedTransactions = await AsyncStorage.getItem(TRANSACTIONS_STORAGE_KEY);
-        if(storedTransactions){
-          const parsedTransactions : Transaction[] = JSON.parse(storedTransactions);
-          setTransactions(parsedTransactions);
-        }
-      }
-      catch(error){
-        console.error('Unable to load transactions:', error);
-      }
-      finally{
-        setHasLoadedTransactions(true);
-      }
-    };
-
-    loadTransactions();
-  }, []);
-
-  useEffect(()=> {
-    if(!hasLoadedTransactions){
-      return;
-    }
-    const saveTransactions = async () =>{
-      try{
-        await AsyncStorage.setItem(
-          TRANSACTIONS_STORAGE_KEY,
-          JSON.stringify(transactions)
-        );
-      }
-      catch(error){
-        console.error('Unable to save transactions:', error);
-      }
-    };
-    saveTransactions();
-  },[transactions, hasLoadedTransactions]);
-
-  
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
           style={styles.keyboardView}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ScrollView
+            contentContainerStyle={styles.container}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
           >
-            <ScrollView
-              contentContainerStyle={styles.container}
-              keyboardDismissMode="on-drag"
-              keyboardShouldPersistTaps="handled"
-            >
-              <View style={styles.header}>
-                <Text style={styles.title}>SpendSense</Text>
-                <Text style={styles.subtitle}>Track where your money goes</Text>
-              </View>
-              <View style={styles.summaryCard}>
-                <Text style={styles.summaryLabel}>Today's Spending</Text>
-                <Text style={styles.summaryAmount}>₹{totalSpent.toFixed(2)}</Text>
-              </View>
-              <View style={styles.formSection}>
-                <Text style={styles.inputLabel}>Merchant</Text>
-                <TextInput
-                  value={merchant}
-                  onChangeText={setMerchant}
-                  placeholder="For example: Swiggy"
-                  placeholderTextColor="#98a2b3"
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                  returnKeyType="done"
-                  underlineColorAndroid="transparent"
-                  style={styles.input}
-                />
-                <Text style={[styles.inputLabel, styles.amountLabel]}>Amount</Text>
-                <TextInput
-                  value={amount}
-                  onChangeText={setAmount}
-                  placeholder="0.00"
-                  placeholderTextColor="#98a2b3"
-                  inputMode="decimal"
-                  returnKeyType="done"
-                  underlineColorAndroid="transparent"
-                  style={styles.input}
-                />
-              </View>
+            <View style={styles.header}>
+              <Text style={styles.title}>SpendSense</Text>
+              <Text style={styles.subtitle}>
+                Understand where your money goes.
+              </Text>
+            </View>
+
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>Today&apos;s spending</Text>
+              <Text style={styles.summaryAmount}>
+                ₹{totalSpent.toFixed(2)}
+              </Text>
+            </View>
+
+            <View style={styles.formSection}>
+              <Text style={styles.inputLabel}>Merchant</Text>
+
+              <TextInput
+                style={styles.input}
+                value={merchant}
+                onChangeText={setMerchant}
+                placeholder="Example: Coffee shop"
+                placeholderTextColor="#98A2B3"
+                autoCapitalize="words"
+                returnKeyType="next"
+              />
+
+              <Text style={[styles.inputLabel, styles.amountLabel]}>
+                Amount
+              </Text>
+
+              <TextInput
+                style={styles.input}
+                value={amount}
+                onChangeText={setAmount}
+                placeholder="Example: 120.50"
+                placeholderTextColor="#98A2B3"
+                inputMode="decimal"
+                returnKeyType="done"
+              />
+
               <Pressable
-                accessibilityRole="button"
-                onPress={handleAddTransaction}
-                style={({pressed}) => [
+                style={({ pressed }) => [
                   styles.addButton,
                   pressed && styles.addButtonPressed,
                 ]}
+                onPress={handleAddTransaction}
               >
-                <Text style={styles.addButtonText}>Add Transaction</Text>
+                <Text style={styles.addButtonText}>Add transaction</Text>
               </Pressable>
+            </View>
 
-              <View style={styles.transactionSection}>
-                <Text style={styles.sectionTitle}>Recent transactions</Text>
-                <Text style={styles.sectionHint}>Long-press a transaction to delete it.</Text>
-                {transactions.length === 0 ? (
-                  <Text style={styles.emptyText}>No transactions added yet.</Text>
-                ) : (
-                  transactions.map((transaction)=>(
-                    <Pressable 
-                      key={transaction.id} 
-                      style={({pressed}) => [
-                        styles.transactionRow,
-                        pressed && styles.transactionRowPressed,
-                      ]}
-                      onLongPress={()=> handleDeleteTransaction(transaction)}
-                    >
-                      <Text style={styles.transactionMerchant}>{transaction.merchant}</Text>
-                      <Text style={styles.transactionAmount}>₹{transaction.amount.toFixed(2)}</Text>
-                    </Pressable>
-                  ))
-                )}
-              </View>
+            <View style={styles.transactionSection}>
+              <Text style={styles.sectionTitle}>Recent transactions</Text>
 
-            </ScrollView>
+              <Text style={styles.sectionHint}>
+                Long-press a transaction to delete it.
+              </Text>
+
+              {transactions.length === 0 ? (
+                <Text style={styles.emptyText}>
+                  No transactions added yet.
+                </Text>
+              ) : (
+                transactions.map((transaction) => (
+                  <TransactionRow
+                    key={transaction.id}
+                    transaction={transaction}
+                    onLongPress={handleDeleteTransaction}
+                  />
+                ))
+              )}
+            </View>
+          </ScrollView>
         </KeyboardAvoidingView>
+
         <StatusBar style="auto" />
       </SafeAreaView>
     </SafeAreaProvider>
@@ -194,24 +215,24 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: '#F5F7FA',
   },
   keyboardView: {
     flex: 1,
   },
   container: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 24,
     paddingBottom: 24,
   },
   header: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   title: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '700',
-    color: '#17202A',
+    color: '#172033',
   },
   subtitle: {
     marginTop: 6,
@@ -219,9 +240,9 @@ const styles = StyleSheet.create({
     color: '#667085',
   },
   summaryCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
     padding: 20,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
     elevation: 2,
   },
   summaryLabel: {
@@ -232,25 +253,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 32,
     fontWeight: '700',
-    color: '#17202A',
-  },
-  addButton:{
-    marginTop: 24,
-    backgroundColor: '#2563eb',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  addButtonPressed: {
-    opacity: 0.75,
-  },
-  addButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: '#172033',
   },
   formSection: {
-    marginTop: 24,
+    marginTop: 28,
   },
   inputLabel: {
     marginBottom: 8,
@@ -258,58 +264,49 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#344054',
   },
-  input: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#d0d5dd',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#17202a',
-  },
   amountLabel: {
     marginTop: 16,
+  },
+  input: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#D0D5DD',
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    fontSize: 16,
+    color: '#172033',
+  },
+  addButton: {
+    alignItems: 'center',
+    marginTop: 20,
+    paddingVertical: 15,
+    borderRadius: 12,
+    backgroundColor: '#155EEF',
+  },
+  addButtonPressed: {
+    opacity: 0.7,
+  },
+  addButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   transactionSection: {
     marginTop: 32,
   },
   sectionTitle: {
-    marginBottom: 12,
     fontSize: 18,
     fontWeight: '700',
     color: '#172033',
   },
-  emptyText: {
-    color: '#667085',
-  },
-  transactionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  transactionMerchant: {
-    flex: 1,
-    marginRight: 16,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#172033',
-  },
-  transactionAmount: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#D92D20',
-  },
-  transactionRowPressed: {
-    opacity: 0.6,
-  },
-  sectionHint:{
+  sectionHint: {
+    marginTop: 4,
     marginBottom: 12,
     color: '#667085',
     fontSize: 13,
+  },
+  emptyText: {
+    color: '#667085',
   },
 });
