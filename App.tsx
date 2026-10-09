@@ -21,13 +21,14 @@ import {
   loadTransactions,
   saveTransactions,
 } from './src/storage/transactionStorage';
-import { Transaction } from './src/types/transaction';
+import { Transaction, TRANSACTION_CATEGORIES, TransactionCategory } from './src/types/transaction';
 
 export default function App() {
   const [merchant, setMerchant] = useState('');
   const [amount, setAmount] = useState('');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [hasLoadedTransactions, setHasLoadedTransactions] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<TransactionCategory>('Other');
 
   const totalSpent = transactions.reduce(
     (total, transaction) => total + transaction.amount,
@@ -82,6 +83,8 @@ export default function App() {
       id: Date.now().toString(),
       merchant: merchant.trim(),
       amount: parsedAmount,
+      category: selectedCategory,
+      createdAt: new Date().toISOString(),
     };
 
     setTransactions((currentTransactions) => [
@@ -91,6 +94,7 @@ export default function App() {
 
     setMerchant('');
     setAmount('');
+    setSelectedCategory('Other');
   };
 
   const handleDeleteTransaction = (transaction: Transaction) => {
@@ -170,6 +174,34 @@ export default function App() {
                 inputMode="decimal"
                 returnKeyType="done"
               />
+              <Text style={[styles.inputLabel, styles.categoryLabel]}>
+                Category
+              </Text>
+              <View style={styles.categoryList}>
+                  {TRANSACTION_CATEGORIES.map((category) => {
+                    const isSelected = category === selectedCategory;
+
+                    return(
+                      <Pressable
+                        key={category}
+                        style={[
+                          styles.categoryButton,
+                          isSelected && styles.categoryButtonSelected,
+                        ]}
+                        onPress={() => setSelectedCategory(category)}
+                      >
+                        <Text
+                          style={[
+                            styles.categoryButtonText,
+                            isSelected && styles.categoryButtonTextSelected,
+                          ]}  
+                        >
+                            {category}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+              </View>
 
               <Pressable
                 style={({ pressed }) => [
@@ -308,5 +340,33 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     color: '#667085',
+  },
+  categoryLabel: {
+    marginTop: 16,
+  },
+  categoryList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  categoryButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: '#D0D5DD',
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+  },
+  categoryButtonSelected: {
+    borderColor: '#155EEF',
+    backgroundColor: '#155EEF',
+  },
+  categoryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#344054',
+  },
+  categoryButtonTextSelected: {
+    color: '#FFFFFF',
   },
 });

@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { Transaction } from '../types/transaction';
+import {isTransactionCategory, Transaction } from '../types/transaction';
 
 const TRANSACTIONS_STORAGE_KEY = '@spendsense/transactions';
 
@@ -13,7 +13,26 @@ export async function loadTransactions(): Promise<Transaction[]> {
     return [];
   }
 
-  return JSON.parse(storedTransactions) as Transaction[];
+  const parsedTransactions = JSON.parse(storedTransactions) as Array<
+    Partial<Transaction>
+    >;
+
+    return parsedTransactions
+        .filter(
+            (transaction) =>
+            typeof transaction.id === 'string' &&
+            typeof transaction.merchant === 'string' &&
+            typeof transaction.amount === 'number'
+        )
+        .map((transaction) => ({
+            id: transaction.id as string,
+            merchant: transaction.merchant as string,
+            amount: transaction.amount as number,
+            category: isTransactionCategory(transaction.category)
+            ? transaction.category
+            : 'Other',
+            createdAt: transaction.createdAt ?? new Date().toISOString(),
+        }));
 }
 
 export async function saveTransactions(

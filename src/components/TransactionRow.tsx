@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text , View} from 'react-native';
 
 import { Transaction } from '../types/transaction';
 
@@ -19,7 +19,14 @@ export function TransactionRow({
       ]}
       onLongPress={() => onLongPress(transaction)}
     >
-      <Text style={styles.merchant}>{transaction.merchant}</Text>
+      <View style={styles.details}>
+        <Text style={styles.merchant}>{transaction.merchant}</Text>
+
+        <Text style={styles.date}>
+          {transaction.category} ·{' '}
+          {new Date(transaction.createdAt).toLocaleDateString()}
+        </Text>
+      </View>
 
       <Text style={styles.amount}>₹{transaction.amount.toFixed(2)}</Text>
     </Pressable>
@@ -39,16 +46,23 @@ const styles = StyleSheet.create({
   containerPressed: {
     opacity: 0.6,
   },
-  merchant: {
-    flex: 1,
-    marginRight: 16,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#172033',
-  },
   amount: {
     fontSize: 16,
     fontWeight: '700',
     color: '#D92D20',
+  },
+  details: {
+    flex: 1,
+    marginRight: 16,
+  },
+  merchant: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#172033',
+  },
+  date: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#667085',
   },
 });
