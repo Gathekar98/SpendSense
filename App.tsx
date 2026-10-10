@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -23,6 +23,16 @@ import {
 } from './src/storage/transactionStorage';
 import { Transaction, TRANSACTION_CATEGORIES, TransactionCategory } from './src/types/transaction';
 
+function isToday(dateString: string): boolean {
+  const transactionDate = new Date(dateString);
+  const today = new Date();
+  return (
+    transactionDate.getFullYear() === today.getFullYear() &&
+    transactionDate.getMonth() === today.getMonth() &&
+    transactionDate.getDate() === today.getDate()
+  );
+}
+
 export default function App() {
   const [merchant, setMerchant] = useState('');
   const [amount, setAmount] = useState('');
@@ -30,10 +40,17 @@ export default function App() {
   const [hasLoadedTransactions, setHasLoadedTransactions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<TransactionCategory>('Other');
 
-  const totalSpent = transactions.reduce(
-    (total, transaction) => total + transaction.amount,
-    0
-  );
+  const todaysTransactions = transactions.filter((transaction) => isToday(transaction.createdAt));
+  const todayTotal = todaysTransactions.reduce((total, transaction) => total + transaction.amount, 0 );
+  const categoryTotals = TRANSACTION_CATEGORIES.map((category) =>{
+    const total = todaysTransactions
+                    .filter((transaction) => transaction.category === category)
+                    .reduce((sum, transaction) => sum + transaction.amount, 0);
+
+    return {
+      category, total
+    };
+  }).filter((categoryTotal) => categoryTotal.total > 0);
 
   useEffect(() => {
     const restoreTransactions = async () => {
@@ -129,113 +146,130 @@ export default function App() {
           style={styles.keyboardView}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <ScrollView
+          <FlatList
+            data={transactions}
+            keyExtractor={(transaction) => transaction.id}
+            renderItem={({ item }) => (
+              <TransactionRow
+                transaction={item}
+                onLongPress={handleDeleteTransaction}
+              />
+            )}
             contentContainerStyle={styles.container}
             keyboardDismissMode="on-drag"
             keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.header}>
-              <Text style={styles.title}>SpendSense</Text>
-              <Text style={styles.subtitle}>
-                Understand where your money goes.
-              </Text>
-            </View>
+            ListHeaderComponent={
+              <>
+                <View style={styles.header}>
+                  <Text style={styles.title}>SpendSense</Text>
+                  <Text style={styles.subtitle}>
+                    Understand where your money goes.
+                  </Text>
+                </View>
 
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Today&apos;s spending</Text>
-              <Text style={styles.summaryAmount}>
-                ₹{totalSpent.toFixed(2)}
-              </Text>
-            </View>
+                <View style={styles.summaryCard}>
+                  <Text style={styles.summaryLabel}>Today&apos;s spending</Text>
+                  <Text style={styles.summaryAmount}>
+                    ₹{todayTotal.toFixed(2)}
+                  </Text>
 
-            <View style={styles.formSection}>
-              <Text style={styles.inputLabel}>Merchant</Text>
-
-              <TextInput
-                style={styles.input}
-                value={merchant}
-                onChangeText={setMerchant}
-                placeholder="Example: Coffee shop"
-                placeholderTextColor="#98A2B3"
-                autoCapitalize="words"
-                returnKeyType="next"
-              />
-
-              <Text style={[styles.inputLabel, styles.amountLabel]}>
-                Amount
-              </Text>
-
-              <TextInput
-                style={styles.input}
-                value={amount}
-                onChangeText={setAmount}
-                placeholder="Example: 120.50"
-                placeholderTextColor="#98A2B3"
-                inputMode="decimal"
-                returnKeyType="done"
-              />
-              <Text style={[styles.inputLabel, styles.categoryLabel]}>
-                Category
-              </Text>
-              <View style={styles.categoryList}>
-                  {TRANSACTION_CATEGORIES.map((category) => {
-                    const isSelected = category === selectedCategory;
-
-                    return(
-                      <Pressable
-                        key={category}
-                        style={[
-                          styles.categoryButton,
-                          isSelected && styles.categoryButtonSelected,
-                        ]}
-                        onPress={() => setSelectedCategory(category)}
-                      >
-                        <Text
-                          style={[
-                            styles.categoryButtonText,
-                            isSelected && styles.categoryButtonTextSelected,
-                          ]}  
-                        >
+                  {categoryTotals.length > 0 && (
+                    <View style={styles.categorySummary}>
+                      {categoryTotals.map(({ category, total }) => (
+                        <View key={category} style={styles.categorySummaryRow}>
+                          <Text style={styles.categorySummaryName}>
                             {category}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-              </View>
+                          </Text>
 
-              <Pressable
-                style={({ pressed }) => [
-                  styles.addButton,
-                  pressed && styles.addButtonPressed,
-                ]}
-                onPress={handleAddTransaction}
-              >
-                <Text style={styles.addButtonText}>Add transaction</Text>
-              </Pressable>
-            </View>
+                          <Text style={styles.categorySummaryAmount}>
+                            ₹{total.toFixed(2)}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
 
-            <View style={styles.transactionSection}>
-              <Text style={styles.sectionTitle}>Recent transactions</Text>
+                <View style={styles.formSection}>
+                  <Text style={styles.inputLabel}>Merchant</Text>
 
-              <Text style={styles.sectionHint}>
-                Long-press a transaction to delete it.
-              </Text>
-
-              {transactions.length === 0 ? (
-                <Text style={styles.emptyText}>
-                  No transactions added yet.
-                </Text>
-              ) : (
-                transactions.map((transaction) => (
-                  <TransactionRow
-                    key={transaction.id}
-                    transaction={transaction}
-                    onLongPress={handleDeleteTransaction}
+                  <TextInput
+                    style={styles.input}
+                    value={merchant}
+                    onChangeText={setMerchant}
+                    placeholder="Example: Coffee shop"
+                    placeholderTextColor="#98A2B3"
+                    autoCapitalize="words"
+                    returnKeyType="next"
                   />
-                ))
-              )}
-            </View>
-          </ScrollView>
+
+                  <Text style={[styles.inputLabel, styles.amountLabel]}>
+                    Amount
+                  </Text>
+
+                  <TextInput
+                    style={styles.input}
+                    value={amount}
+                    onChangeText={setAmount}
+                    placeholder="Example: 120.50"
+                    placeholderTextColor="#98A2B3"
+                    inputMode="decimal"
+                    returnKeyType="done"
+                  />
+
+                  <Text style={[styles.inputLabel, styles.categoryLabel]}>
+                    Category
+                  </Text>
+
+                  <View style={styles.categoryList}>
+                    {TRANSACTION_CATEGORIES.map((category) => {
+                      const isSelected = category === selectedCategory;
+
+                      return (
+                        <Pressable
+                          key={category}
+                          style={[
+                            styles.categoryButton,
+                            isSelected && styles.categoryButtonSelected,
+                          ]}
+                          onPress={() => setSelectedCategory(category)}
+                        >
+                          <Text
+                            style={[
+                              styles.categoryButtonText,
+                              isSelected && styles.categoryButtonTextSelected,
+                            ]}
+                          >
+                            {category}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.addButton,
+                      pressed && styles.addButtonPressed,
+                    ]}
+                    onPress={handleAddTransaction}
+                  >
+                    <Text style={styles.addButtonText}>Add transaction</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.transactionSection}>
+                  <Text style={styles.sectionTitle}>Recent transactions</Text>
+                  <Text style={styles.sectionHint}>
+                    Long-press a transaction to delete it.
+                  </Text>
+                </View>
+              </>
+            }
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>No transactions added yet.</Text>
+            }
+          />
         </KeyboardAvoidingView>
 
         <StatusBar style="auto" />
@@ -368,5 +402,25 @@ const styles = StyleSheet.create({
   },
   categoryButtonTextSelected: {
     color: '#FFFFFF',
+  },
+  categorySummary: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#EAECF0',
+  },
+  categorySummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  categorySummaryName: {
+    fontSize: 14,
+    color: '#667085',
+  },
+  categorySummaryAmount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#344054',
   },
 });
