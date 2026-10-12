@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'expo-router';
 import {
   Alert,
   FlatList,
@@ -16,12 +17,12 @@ import {
   SafeAreaView,
 } from 'react-native-safe-area-context';
 
-import { TransactionRow } from './src/components/TransactionRow';
+import { TransactionRow } from '../components/TransactionRow';
 import {
   loadTransactions,
   saveTransactions,
-} from './src/storage/transactionStorage';
-import { Transaction, TRANSACTION_CATEGORIES, TransactionCategory } from './src/types/transaction';
+} from '../storage/transactionStorage';
+import { Transaction, TRANSACTION_CATEGORIES, TransactionCategory } from '../types/transaction';
 
 function isToday(dateString: string): boolean {
   const transactionDate = new Date(dateString);
@@ -33,7 +34,7 @@ function isToday(dateString: string): boolean {
   );
 }
 
-export default function App() {
+export default function HomeScreen() {
   const [merchant, setMerchant] = useState('');
   const [amount, setAmount] = useState('');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -258,11 +259,13 @@ export default function App() {
                   </Pressable>
                 </View>
 
-                <View style={styles.transactionSection}>
+                <View style={styles.transactionSectionHeader}>
                   <Text style={styles.sectionTitle}>Recent transactions</Text>
-                  <Text style={styles.sectionHint}>
-                    Long-press a transaction to delete it.
-                  </Text>
+                  <Link href="/transactions" asChild>
+                        <Pressable>
+                            <Text style={styles.viewAllText}>View all</Text>
+                        </Pressable>
+                  </Link>
                 </View>
               </>
             }
@@ -279,148 +282,160 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  container: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 24,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: '#172033',
-  },
-  subtitle: {
-    marginTop: 6,
-    fontSize: 15,
-    color: '#667085',
-  },
-  summaryCard: {
-    padding: 20,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    elevation: 2,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: '#667085',
-  },
-  summaryAmount: {
-    marginTop: 8,
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#172033',
-  },
-  formSection: {
-    marginTop: 28,
-  },
-  inputLabel: {
-    marginBottom: 8,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#344054',
-  },
-  amountLabel: {
-    marginTop: 16,
-  },
-  input: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: '#D0D5DD',
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    fontSize: 16,
-    color: '#172033',
-  },
-  addButton: {
-    alignItems: 'center',
-    marginTop: 20,
-    paddingVertical: 15,
-    borderRadius: 12,
-    backgroundColor: '#155EEF',
-  },
-  addButtonPressed: {
-    opacity: 0.7,
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  transactionSection: {
-    marginTop: 32,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#172033',
-  },
-  sectionHint: {
-    marginTop: 4,
-    marginBottom: 12,
-    color: '#667085',
-    fontSize: 13,
-  },
-  emptyText: {
-    color: '#667085',
-  },
-  categoryLabel: {
-    marginTop: 16,
-  },
-  categoryList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  categoryButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderWidth: 1,
-    borderColor: '#D0D5DD',
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-  },
-  categoryButtonSelected: {
-    borderColor: '#155EEF',
-    backgroundColor: '#155EEF',
-  },
-  categoryButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#344054',
-  },
-  categoryButtonTextSelected: {
-    color: '#FFFFFF',
-  },
-  categorySummary: {
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#EAECF0',
-  },
-  categorySummaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  categorySummaryName: {
-    fontSize: 14,
-    color: '#667085',
-  },
-  categorySummaryAmount: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#344054',
-  },
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#F5F7FA',
+    },
+    keyboardView: {
+        flex: 1,
+    },
+    container: {
+        flexGrow: 1,
+        paddingHorizontal: 24,
+        paddingTop: 24,
+        paddingBottom: 24,
+    },
+    header: {
+        marginBottom: 24,
+    },
+    title: {
+        fontSize: 30,
+        fontWeight: '700',
+        color: '#172033',
+    },
+    subtitle: {
+        marginTop: 6,
+        fontSize: 15,
+        color: '#667085',
+    },
+    summaryCard: {
+        padding: 20,
+        borderRadius: 16,
+        backgroundColor: '#FFFFFF',
+        elevation: 2,
+    },
+    summaryLabel: {
+        fontSize: 14,
+        color: '#667085',
+    },
+    summaryAmount: {
+        marginTop: 8,
+        fontSize: 32,
+        fontWeight: '700',
+        color: '#172033',
+    },
+    formSection: {
+        marginTop: 28,
+    },
+    inputLabel: {
+        marginBottom: 8,
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#344054',
+    },
+    amountLabel: {
+        marginTop: 16,
+    },
+    input: {
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderWidth: 1,
+        borderColor: '#D0D5DD',
+        borderRadius: 12,
+        backgroundColor: '#FFFFFF',
+        fontSize: 16,
+        color: '#172033',
+    },
+    addButton: {
+        alignItems: 'center',
+        marginTop: 20,
+        paddingVertical: 15,
+        borderRadius: 12,
+        backgroundColor: '#155EEF',
+    },
+    addButtonPressed: {
+        opacity: 0.7,
+    },
+    addButtonText: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#FFFFFF',
+    },
+    transactionSection: {
+        marginTop: 32,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#172033',
+    },
+    sectionHint: {
+        marginTop: 4,
+        marginBottom: 12,
+        color: '#667085',
+        fontSize: 13,
+    },
+    emptyText: {
+        color: '#667085',
+    },
+    categoryLabel: {
+        marginTop: 16,
+    },
+    categoryList: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    categoryButton: {
+        paddingHorizontal: 14,
+        paddingVertical: 9,
+        borderWidth: 1,
+        borderColor: '#D0D5DD',
+        borderRadius: 20,
+        backgroundColor: '#FFFFFF',
+    },
+    categoryButtonSelected: {
+        borderColor: '#155EEF',
+        backgroundColor: '#155EEF',
+    },
+    categoryButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#344054',
+    },
+    categoryButtonTextSelected: {
+        color: '#FFFFFF',
+    },
+    categorySummary: {
+        marginTop: 20,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#EAECF0',
+    },
+    categorySummaryRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+    },
+    categorySummaryName: {
+        fontSize: 14,
+        color: '#667085',
+    },
+    categorySummaryAmount: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#344054',
+    },
+    transactionSectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 32,
+        marginBottom: 12,
+    },
+    viewAllText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#155EEF',
+    },
 });
