@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'expo-router';
 import {
   Alert,
@@ -18,11 +18,8 @@ import {
 } from 'react-native-safe-area-context';
 
 import { TransactionRow } from '../components/TransactionRow';
-import {
-  loadTransactions,
-  saveTransactions,
-} from '../storage/transactionStorage';
 import { Transaction, TRANSACTION_CATEGORIES, TransactionCategory } from '../types/transaction';
+import { useTransactions } from '../context/TransactionsContext';
 
 function isToday(dateString: string): boolean {
   const transactionDate = new Date(dateString);
@@ -37,8 +34,7 @@ function isToday(dateString: string): boolean {
 export default function HomeScreen() {
   const [merchant, setMerchant] = useState('');
   const [amount, setAmount] = useState('');
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [hasLoadedTransactions, setHasLoadedTransactions] = useState(false);
+  const {transactions, addTransaction, deleteTransaction} = useTransactions();
   const [selectedCategory, setSelectedCategory] = useState<TransactionCategory>('Other');
 
   const todaysTransactions = transactions.filter((transaction) => isToday(transaction.createdAt));
@@ -53,37 +49,6 @@ export default function HomeScreen() {
     };
   }).filter((categoryTotal) => categoryTotal.total > 0);
 
-  useEffect(() => {
-    const restoreTransactions = async () => {
-      try {
-        const storedTransactions = await loadTransactions();
-        setTransactions(storedTransactions);
-      } catch (error) {
-        console.error('Unable to load transactions:', error);
-      } finally {
-        setHasLoadedTransactions(true);
-      }
-    };
-
-    restoreTransactions();
-  }, []);
-
-  useEffect(() => {
-    if (!hasLoadedTransactions) {
-      return;
-    }
-
-    const persistTransactions = async () => {
-      try {
-        await saveTransactions(transactions);
-      } catch (error) {
-        console.error('Unable to save transactions:', error);
-      }
-    };
-
-    persistTransactions();
-  }, [transactions, hasLoadedTransactions]);
-
   const handleAddTransaction = () => {
     const parsedAmount = Number(amount);
 
@@ -97,18 +62,11 @@ export default function HomeScreen() {
       return;
     }
 
-    const newTransaction: Transaction = {
-      id: Date.now().toString(),
-      merchant: merchant.trim(),
-      amount: parsedAmount,
-      category: selectedCategory,
-      createdAt: new Date().toISOString(),
-    };
-
-    setTransactions((currentTransactions) => [
-      newTransaction,
-      ...currentTransactions,
-    ]);
+    addTransaction({
+        merchant: merchant.trim(),
+        amount: parsedAmount,
+        category: selectedCategory,
+    });
 
     setMerchant('');
     setAmount('');
@@ -128,12 +86,7 @@ export default function HomeScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            setTransactions((currentTransactions) =>
-              currentTransactions.filter(
-                (currentTransaction) =>
-                  currentTransaction.id !== transaction.id
-              )
-            );
+             deleteTransaction(transaction.id);
           },
         },
       ]

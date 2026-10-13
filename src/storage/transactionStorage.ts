@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {isTransactionCategory, Transaction } from '../types/transaction';
 
-const TRANSACTIONS_STORAGE_KEY = '@spendsense/transactions';
+const TRANSACTIONS_STORAGE_KEY = '@spendsense/transactions-v2';
 
 export async function loadTransactions(): Promise<Transaction[]> {
   const storedTransactions = await AsyncStorage.getItem(
